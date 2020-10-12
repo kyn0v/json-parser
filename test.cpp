@@ -56,15 +56,16 @@ static void test_parse_expect_value() {
 	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
 }
 
-static void test_parse_invalid_value() {
+inline void TEST_ERROR(int error, const char* json) {
 	lept_value v;
 	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_INVALID_VALUE, lept_parse(&v, "nul"));
+	EXPECT_EQ_INT(error, lept_parse(&v, json));
 	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+}
 
-	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_INVALID_VALUE, lept_parse(&v, "?"));
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+static void test_parse_invalid_value() {
+	TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "nul");
+	TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "?");
 }
 
 static void test_parse_root_not_singular() {
