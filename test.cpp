@@ -20,7 +20,7 @@ inline void EXPECT_EQ_BASE(bool equality, double expect, double actual, string f
 }
 
 inline void EXPECT_EQ_INT(int expect, int actual) {
-	EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d");
+	EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.0f");
 }
 
 inline void EXPECT_EQ_DOUBLE(double expect, double actual) {
