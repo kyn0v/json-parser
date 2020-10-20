@@ -118,7 +118,7 @@ static void test_parse_number() {
 	TEST_ERROR(LEPT_PARSE_INVALID_VALUE, "nan");
 
 	/* add test case*/
-	TEST_ERROR(1.0000000000000002, "1.0000000000000002"); // the smallest number > 1
+	TEST_NUMBER(1.0000000000000002, "1.0000000000000002"); // the smallest number > 1
 	TEST_NUMBER(4.9406564584124654e-324, "4.9406564584124654e-324"); /* Min subnormal positive double */
 	TEST_NUMBER(-4.9406564584124654e-324, "-4.9406564584124654e-324");
 	TEST_NUMBER(2.2250738585072009e-308, "2.2250738585072009e-308");  /* Max subnormal double */
@@ -136,6 +136,7 @@ static void test_parse() {
 	test_parse_expect_value();
 	test_parse_invalid_value();
 	test_parse_root_not_singular();
+	test_parse_number();
 }
 
 int main() {

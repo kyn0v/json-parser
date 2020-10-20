@@ -11,6 +11,14 @@ inline void EXPECT(lept_context* c, char ch) {
 	c->json++;
 }
 
+inline bool ISDIGIT1TO9(char ch) {
+	return (ch >= '1' && ch <= '9');
+}
+
+inline bool ISDIGIT(char ch) {
+	return (ch >= '0' && ch <= '9');
+}
+
 static void lept_parse_whitespace(lept_context* c) {
 	const char* p = c->json;
 	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
@@ -22,7 +30,7 @@ static int lept_parse_literal(lept_context* c, lept_value* v, const char* litera
 	size_t i;
 	EXPECT(c, literal[0]);
 	for (i = 1; literal[i]; i++) {
-		if (c->json[i-1] != literal[i]) {
+		if (c->json[i - 1] != literal[i]) {
 			return LEPT_PARSE_INVALID_VALUE;
 		}
 	}
@@ -31,12 +39,46 @@ static int lept_parse_literal(lept_context* c, lept_value* v, const char* litera
 	return LEPT_PARSE_OK;
 }
 
+
+
 static int lept_parse_number(lept_context* c, lept_value* v) {
+	/*
+		grammar:
+			number = [ "-" ] int [ frac ] [ exp ]
+			int = "0" / digit1-9 *digit
+			frac = "." 1*digit
+			exp = ("e" / "E") ["-" / "+"] 1*digit
+	*/
+	const char* p = c->json;
+
+	if (*p == '-') p++;
+
+	if (*p == '0') p++;
+	else {
+		if (!ISDIGIT1TO9(*p)) return LEPT_PARSE_INVALID_VALUE;
+		p++;
+		while (ISDIGIT(*p)) p++;
+	}
+
+	if (*p == '.') {
+		p++;
+		if (!ISDIGIT(*p)) return LEPT_PARSE_INVALID_VALUE;
+		p++;
+		while (ISDIGIT(*p)) p++;
+	}
+
+	if (*p == 'e' || *p == 'E') {
+		p++;
+		if (*p == '+' || *p == '-') p++;
+		if (!ISDIGIT(*p)) return LEPT_PARSE_INVALID_VALUE;
+		p++;
+		while (ISDIGIT(*p)) p++;
+	}
+
 	char* end;
-	/* \TODO validate number */
 	v->n = strtod(c->json, &end);
-	if (c->json == end)
-		return LEPT_PARSE_INVALID_VALUE;
+	errno = 0;
+	v->n = strtod(c->json, NULL);
 	c->json = end;
 	v->type = LEPT_NUMBER;
 	return LEPT_PARSE_OK;
