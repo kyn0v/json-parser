@@ -71,12 +71,8 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
 		if (!ISDIGIT(*p)) return LEPT_PARSE_INVALID_VALUE;
 		for (p++; ISDIGIT(*p); p++);
 	}
-
-	char* end;
-	v->n = strtod(c->json, &end);
-	errno = 0;
 	v->n = strtod(c->json, NULL);
-	c->json = end;
+	c->json = p;
 	v->type = LEPT_NUMBER;
 	return LEPT_PARSE_OK;
 }

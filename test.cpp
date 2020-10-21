@@ -34,7 +34,7 @@ inline void TEST_NUMBER(double expect, const char* json) {
 	EXPECT_EQ_DOUBLE(expect, lept_get_number(&v));
 }
 
-inline void TEST_ERROR(int error, const char* json) {
+inline void TEST_ERROR(double error, const char* json) {
 	lept_value v;
 	v.type = LEPT_FALSE;
 	EXPECT_EQ_INT(error, lept_parse(&v, json));
@@ -63,15 +63,8 @@ static void test_parse_false() {
 }
 
 static void test_parse_expect_value() {
-	lept_value v;
-
-	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_EXPECT_VALUE, lept_parse(&v, ""));
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
-
-	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_EXPECT_VALUE, lept_parse(&v, " "));
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+	TEST_ERROR(LEPT_PARSE_EXPECT_VALUE, "");
+	TEST_ERROR(LEPT_PARSE_EXPECT_VALUE, " ");
 }
 
 static void test_parse_invalid_value() {
@@ -80,10 +73,12 @@ static void test_parse_invalid_value() {
 }
 
 static void test_parse_root_not_singular() {
-	lept_value v;
-	v.type = LEPT_FALSE;
-	EXPECT_EQ_INT(LEPT_PARSE_ROOT_NOT_SINGULAR, lept_parse(&v, "null x"));
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "null x");
+
+	/* invalid number */
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0123"); /* after zero should be '.' or nothing */
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x0");
+	TEST_ERROR(LEPT_PARSE_ROOT_NOT_SINGULAR, "0x123");
 }
 
 static void test_parse_number() {
