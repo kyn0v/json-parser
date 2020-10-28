@@ -12,7 +12,10 @@ enum lept_type {
 };
 
 struct lept_value {
-	double n;
+	union {
+		struct { char* s; size_t len; } s;
+		double n;
+	} u;
 	lept_type type;
 };
 
