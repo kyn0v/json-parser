@@ -129,6 +129,16 @@ static void test_parse_number_too_big() {
 	TEST_ERROR(LEPT_PARSE_NUMBER_TOO_BIG, "-1e309");
 }
 
+static void test_access_string() {
+	lept_value v;
+	lept_init(&v);
+	lept_set_string(&v, "", 0);
+	EXPECT_EQ_STRING("", lept_get_string(&v), lept_get_string_length(&v));
+	lept_set_string(&v, "Hello", 5);
+	EXPECT_EQ_STRING("Hello", lept_get_string(&v), lept_get_string_length(&v));
+	lept_free(&v);
+}
+
 static void test_parse() {
 	test_parse_null();
 	test_parse_true();

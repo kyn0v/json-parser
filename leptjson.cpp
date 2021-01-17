@@ -3,9 +3,12 @@
 #include <stdlib.h>  /* NULL, strtod()*/
 #include <errno.h>   /* errno, ERANGE */
 #include <math.h>    /* HUGE_VAL */
+#include <string.h>
 
 struct lept_context {
 	const char* json;
+	char* stack;
+	size_t size, top;	// 由于我们会扩展 stack，所以不要把 top 用指针形式存储
 };
 
 inline void EXPECT(lept_context* c, char ch) {
@@ -19,6 +22,10 @@ inline bool ISDIGIT1TO9(char ch) {
 
 inline bool ISDIGIT(char ch) {
 	return (ch >= '0' && ch <= '9');
+}
+
+void lept_init(lept_value * v) {
+	v->type = LEPT_NULL;
 }
 
 static void lept_parse_whitespace(lept_context* c) {
@@ -40,8 +47,6 @@ static int lept_parse_literal(lept_context* c, lept_value* v, const char* litera
 	v->type = type;
 	return LEPT_PARSE_OK;
 }
-
-
 
 static int lept_parse_number(lept_context* c, lept_value* v) {
 	/*
@@ -97,7 +102,9 @@ int lept_parse(lept_value* v, const char* json) {
 	int ret;
 	assert(v != NULL);
 	c.json = json;
-	v->type = LEPT_NULL;
+	c.stack = NULL;
+	c.size = c.top = 0;
+	lept_init(v);
 	lept_parse_whitespace(&c);
 	ret = lept_parse_value(&c, v);
 	if (ret == LEPT_PARSE_OK) {
@@ -107,6 +114,8 @@ int lept_parse(lept_value* v, const char* json) {
 			ret = LEPT_PARSE_ROOT_NOT_SINGULAR;
 		}
 	}
+	assert(c.top == 0);
+	delete[] c.stack;
 	return ret;
 }
 
@@ -119,4 +128,70 @@ double lept_get_number(const lept_value* v)
 {
 	assert(v != NULL && v->type == LEPT_NUMBER);
 	return v->u.n;
+}
+
+void lept_free(lept_value* v) {
+	assert(v != NULL);
+	if (v->type == LEPT_STRING) {
+		delete[] v->u.s.s;
+	}
+	v->type = LEPT_NULL;
+}
+
+void lept_set_string(lept_value* v, const char* s, size_t len) {
+	assert(v != NULL && (s != NULL || len == 0));
+	lept_free(v);
+	v->u.s.s = new char[len + 1];
+	memcpy(v->u.s.s, s, len);	// 替换成memcpy_s?
+	v->u.s.s[len] = '\0';
+	v->u.s.len = len;
+	v->type = LEPT_STRING;
+}
+
+#ifndef LEPT_PARSE_STACK_INIT_SIZE
+#define LEPT_PARSE_STACK_INIT_SIZE 256
+#endif
+
+static void* lept_context_push(lept_context* c, size_t size) {
+	void* ret;
+	assert(size > 0);
+	if (c->top + size >= c->size) {
+		if (c->size == 0)
+			c->size = LEPT_PARSE_STACK_INIT_SIZE;
+		while (c->top + size >= c->size)
+			c->size += c->size >> 1;  /* c->size * 1.5 */
+		c->stack = (char*)realloc(c->stack, c->size);
+	}
+	ret = c->stack + c->top;
+	c->top += size;
+	return ret;
+}
+
+static void* lept_context_pop(lept_context* c, size_t size) {
+	assert(c->top >= size);
+	return c->stack + (c->top -= size);
+}
+
+#define PUTC(c, ch) do { *(char*)lept_context_push(c, sizeof(char)) = (ch); } while(0)
+
+static int lept_parse_string(lept_context* c, lept_value* v) {
+	size_t head = c->top, len;
+	const char* p;
+	EXPECT(c, '\"');
+	p = c->json;
+	for (;;) {
+		char ch = *p++;
+		switch (ch) {
+		case '\"':
+			len = c->top - head;
+			lept_set_string(v, (const char*)lept_context_pop(c, len), len);
+			c->json = p;
+			return LEPT_PARSE_OK;
+		case '\0':
+			c->top = head;
+			return LEPT_PARSE_MISS_QUOTATION_MARK;
+		default:
+			PUTC(c, ch);
+		}
+	}
 }
