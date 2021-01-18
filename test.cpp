@@ -9,7 +9,8 @@ static int main_ret = 0;
 static int test_count = 0;
 static int test_pass = 0;
 
-inline void EXPECT_EQ_BASE(bool equality, double expect, double actual, string format) {
+template<typename T>
+void EXPECT_EQ_BASE(bool equality, T expect, T actual, string format) {
 	test_count++;
 	if (equality)
 		test_pass++;
@@ -19,22 +20,35 @@ inline void EXPECT_EQ_BASE(bool equality, double expect, double actual, string f
 	}
 }
 
-inline void EXPECT_EQ_INT(int expect, int actual) {
+void EXPECT_EQ_INT(int expect, int actual) {
 	EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.0f");
 }
 
-inline void EXPECT_EQ_DOUBLE(double expect, double actual) {
+void EXPECT_EQ_DOUBLE(double expect, double actual) {
 	EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%.17g");
 }
 
-inline void TEST_NUMBER(double expect, const char* json) {
+void EXPECT_EQ_STRING(const char expect[], const char actual[], size_t alength) {
+	EXPECT_EQ_BASE(sizeof(expect) - 1 == alength && memcmp(expect, actual, alength) == 0, expect, actual, "%s");
+}
+
+void TEST_NUMBER(double expect, const char* json) {
 	lept_value v;
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, json));
 	EXPECT_EQ_INT(LEPT_NUMBER, lept_get_type(&v));
 	EXPECT_EQ_DOUBLE(expect, lept_get_number(&v));
 }
 
-inline void TEST_ERROR(double error, const char* json) {
+void TEST_STRING(char expect[], char json[]) {
+	lept_value v;
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, json));
+		EXPECT_EQ_INT(LEPT_STRING, lept_get_type(&v));
+		EXPECT_EQ_STRING(expect, lept_get_string(&v), lept_get_string_length(&v));
+		lept_free(&v);
+}
+
+void TEST_ERROR(double error, const char* json) {
 	lept_value v;
 	v.type = LEPT_FALSE;
 	EXPECT_EQ_INT(error, lept_parse(&v, json));
@@ -43,23 +57,29 @@ inline void TEST_ERROR(double error, const char* json) {
 
 static void test_parse_null() {
 	lept_value v;
-	v.type = LEPT_FALSE;
+	lept_init(&v);
+	// lept_set_null(&v);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "null"));
 	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+	lept_free(&v);
 }
 
 static void test_parse_true() {
 	lept_value v;
-	v.type = LEPT_FALSE;
+	lept_init(&v);
+	lept_set_boolean(&v, true);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "true"));
 	EXPECT_EQ_INT(LEPT_TRUE, lept_get_type(&v));
+	lept_free(&v);
 }
 
 static void test_parse_false() {
 	lept_value v;
-	v.type = LEPT_FALSE;
+	lept_init(&v);
+	lept_set_boolean(&v, false);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "false"));
 	EXPECT_EQ_INT(LEPT_FALSE, lept_get_type(&v));
+	lept_free(&v);
 }
 
 static void test_parse_expect_value() {
@@ -127,16 +147,6 @@ static void test_parse_number() {
 static void test_parse_number_too_big() {
 	TEST_ERROR(LEPT_PARSE_NUMBER_TOO_BIG, "1e309");
 	TEST_ERROR(LEPT_PARSE_NUMBER_TOO_BIG, "-1e309");
-}
-
-static void test_access_string() {
-	lept_value v;
-	lept_init(&v);
-	lept_set_string(&v, "", 0);
-	EXPECT_EQ_STRING("", lept_get_string(&v), lept_get_string_length(&v));
-	lept_set_string(&v, "Hello", 5);
-	EXPECT_EQ_STRING("Hello", lept_get_string(&v), lept_get_string_length(&v));
-	lept_free(&v);
 }
 
 static void test_parse() {
