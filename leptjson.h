@@ -39,6 +39,8 @@ int lept_parse(lept_value* v, const char* json);
 
 lept_type lept_get_type(const lept_value* v);
 
+void lept_set_null(lept_value* v);
+
 bool lept_get_boolean(const lept_value* v);
 void lept_set_boolean(lept_value* v, bool b);
 
