@@ -55,7 +55,7 @@ void TEST_NUMBER(double expect, const char* json) {
 	lept_free(&v);
 }
 
-void TEST_STRING(char expect[], char json[]) {
+void TEST_STRING(const char expect[], const char json[]) {
 	lept_value v;
 	lept_init(&v);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, json));
@@ -146,7 +146,8 @@ static void test_parse_number() {
 static void test_parse_string() {
 	TEST_STRING("", "\"\"");
 	TEST_STRING("Hello", "\"Hello\"");
-#if 0
+// 代码中已有注释时，用 #if 0 ... #endif 去禁用代码是一个常用技巧，而且可以把 0 改为 1 去恢复。
+#if 1
 	TEST_STRING("Hello\nWorld", "\"Hello\\nWorld\"");
 	TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
 #endif
@@ -182,7 +183,7 @@ static void test_parse_missing_quotation_mark() {
 }
 
 static void test_parse_invalid_string_escape() {
-#if 0
+#if 1
 	TEST_ERROR(LEPT_PARSE_INVALID_STRING_ESCAPE, "\"\\v\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_STRING_ESCAPE, "\"\\'\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_STRING_ESCAPE, "\"\\0\"");
@@ -191,7 +192,7 @@ static void test_parse_invalid_string_escape() {
 }
 
 static void test_parse_invalid_string_char() {
-#if 0
+#if 1
 	TEST_ERROR(LEPT_PARSE_INVALID_STRING_CHAR, "\"\x01\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_STRING_CHAR, "\"\x1F\"");
 #endif

@@ -12,11 +12,24 @@
 
 const int LEPT_PARSE_STACK_INIT_SIZE = 256;
 
-struct lept_context {
+struct lept_context {	// 为了减少解析函数之间传递多个参数，数据都放进一个 lept_context 结构体
 	const char* json;
 	char* stack;
 	size_t size, top;
 };
+
+inline void EXPECT(lept_context* c, char ch) {
+	assert(*c->json == (ch));
+	c->json++;
+}
+
+inline bool ISDIGIT1TO9(char ch) {
+	return (ch >= '1' && ch <= '9');
+}
+
+inline bool ISDIGIT(char ch) {
+	return (ch >= '0' && ch <= '9');
+}
 
 static void* lept_context_push(lept_context* c, size_t size) {
 	void* ret;
@@ -42,26 +55,13 @@ static void* lept_context_push(lept_context* c, size_t size) {
 	return ret;
 }
 
+inline void PUTC(lept_context* c, char ch) {
+	*(char *)lept_context_push(c, sizeof(char)) = ch;
+}
+
 static void* lept_context_pop(lept_context* c, size_t size) {
 	assert(c->top >= size);
 	return c->stack + (c->top -= size);
-}
-
-inline void EXPECT(lept_context* c, char ch) {
-	assert(*c->json == (ch));
-	c->json++;
-}
-
-inline bool ISDIGIT1TO9(char ch) {
-	return (ch >= '1' && ch <= '9');
-}
-
-inline bool ISDIGIT(char ch) {
-	return (ch >= '0' && ch <= '9');
-}
-
-inline void PUTC(lept_context* c, char ch) {
-	*(char *)lept_context_push(c, sizeof(char)) = ch;
 }
 
 inline void lept_init(lept_value * v) {
@@ -78,8 +78,9 @@ void lept_free(lept_value* v) {
 
 static void lept_parse_whitespace(lept_context* c) {
 	const char* p = c->json;
-	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {	// 空格符（space）/制表符（tab）/换行符（LF）/回车符（CR）
 		p++;
+	}
 	c->json = p;
 }
 
@@ -136,6 +137,24 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
 }
 
 static int lept_parse_string(lept_context* c, lept_value* v) {
+	/*
+	grammar:
+		string = quotation-mark *char quotation-mark
+		char = unescaped /
+			escape (
+			%x22 /          ; "    quotation mark  U+0022
+			%x5C /          ; \    reverse solidus U+005C
+			%x2F /          ; /    solidus         U+002F
+			%x62 /          ; b    backspace       U+0008
+			%x66 /          ; f    form feed       U+000C
+			%x6E /          ; n    line feed       U+000A
+			%x72 /          ; r    carriage return U+000D
+			%x74 /          ; t    tab             U+0009
+			%x75 4HEXDIG )  ; uXXXX                U+XXXX
+		escape = %x5C          ; \
+		quotation-mark = %x22  ; "
+		unescaped = %x20-21 / %x23-5B / %x5D-10FFFF
+	*/
 	size_t head = c->top, len;
 	const char* p;
 	EXPECT(c, '\"');
@@ -181,9 +200,9 @@ static int lept_parse_value(lept_context* c, lept_value* v) {
 		case 'n':  return lept_parse_literal(c, v, "null", LEPT_NULL);
 		case 't': return lept_parse_literal(c, v, "true", LEPT_TRUE);
 		case 'f': return lept_parse_literal(c, v, "false", LEPT_FALSE);
-		default:  return lept_parse_number(c, v);	// 0-9 || -
 		case '"': return lept_parse_string(c, v);
 		case '\0': return LEPT_PARSE_EXPECT_VALUE;
+		default:  return lept_parse_number(c, v);	// 0-9 || -
 	}
 }
 
@@ -221,8 +240,6 @@ void lept_set_null(lept_value* v) {
 	}
 	v->type = LEPT_NULL;
 }
-
-
 
 bool lept_get_boolean(const lept_value* v) {
 	assert(v != NULL && (v->type == LEPT_TRUE || v->type == LEPT_FALSE));
