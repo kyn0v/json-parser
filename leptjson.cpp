@@ -154,38 +154,41 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 		escape = %x5C          ; \
 		quotation-mark = %x22  ; "
 		unescaped = %x20-21 / %x23-5B / %x5D-10FFFF
+	note：
+		无转义字符就是普通的字符，语法中列出了合法的码点范围（unescaped）。
+		要注意的是，该范围不包括 0 至 31、双引号和反斜线，这些码点都必须要使用转义方式表示。
 	*/
 	size_t head = c->top, len;
 	const char* p;
-	EXPECT(c, '\"');
+	EXPECT(c, '\"');	// 字符串开头的引号
 	p = c->json;
 	for (;;) {
-		char ch = *p++;
+		char ch = *p++;	// 取值后指针后移
 		switch (ch) {
-			case '\"':
+			case '\"':	// 情况1：遇到双引号
 				len = c->top - head;
 				lept_set_string(v, (const char*)lept_context_pop(c, len), len);
 				c->json = p;
 				return LEPT_PARSE_OK;
-			case '\\':
+			case '\\':	// 情况2：遇到转义符号
 				switch (*p++) {
-				case '\"': PUTC(c, '\"'); break;
-				case '\\': PUTC(c, '\\'); break;
-				case '/':  PUTC(c, '/'); break;
-				case 'b':  PUTC(c, '\b'); break;
-				case 'f':  PUTC(c, '\f'); break;
-				case 'n':  PUTC(c, '\n'); break;
-				case 'r':  PUTC(c, '\r'); break;
-				case 't':  PUTC(c, '\t'); break;
-				default:
-					c->top = head;
-					return LEPT_PARSE_INVALID_STRING_ESCAPE;
-				}
+					case '\"': PUTC(c, '\"'); break;
+					case '\\': PUTC(c, '\\'); break;
+					case '/':  PUTC(c, '/'); break;
+					case 'b':  PUTC(c, '\b'); break;
+					case 'f':  PUTC(c, '\f'); break;
+					case 'n':  PUTC(c, '\n'); break;
+					case 'r':  PUTC(c, '\r'); break;
+					case 't':  PUTC(c, '\t'); break;
+					default:	// 不合法转义
+						c->top = head;
+						return LEPT_PARSE_INVALID_STRING_ESCAPE;
+					}
 				break;
-			case '\0':
+			case '\0':	// 情况3：缺少右引号（样例见test_parse_missing_quotation_mark）
 				c->top = head;
 				return LEPT_PARSE_MISS_QUOTATION_MARK;
-			default:
+			default:	// 情况4：不合法字符串
 				if ((unsigned char)ch < 0x20) {
 					c->top = head;
 					return LEPT_PARSE_INVALID_STRING_CHAR;
