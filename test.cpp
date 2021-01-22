@@ -151,6 +151,7 @@ static void test_parse_string() {
 	TEST_STRING("Hello\nWorld", "\"Hello\\nWorld\"");
 	TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
 #endif
+	TEST_STRING("Hello\0World", "\"Hello\\u0000World\"");
 }
 
 static void test_parse_expect_value() {

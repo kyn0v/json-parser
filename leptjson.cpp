@@ -55,7 +55,7 @@ static void* lept_context_push(lept_context* c, size_t size) {
 	return ret;
 }
 
-inline void PUTC(lept_context* c, char ch) {
+void PUTC(lept_context* c, char ch) {
 	*(char *)lept_context_push(c, sizeof(char)) = ch;
 }
 
@@ -136,6 +136,49 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
 	return LEPT_PARSE_OK;
 }
 
+static const char* lept_parse_hex4(const char* p, unsigned* u) {	// 读取4位16进制数字
+	*u = 0;
+	for (int i = 0; i < 4; i++) {
+		char ch = *p++;
+		*u <<= 4;
+		if (ch >= '0'&&ch <= '9') *u |= (ch - '0');
+		else if (ch >= 'A'&&ch <= 'F')*u |= (ch - 'A' + 10);
+		else if (ch >= 'a'&&ch <= 'f')*u |= (ch - 'a' + 10);
+		else return NULL;
+	}
+	return p;
+}
+
+#if 0
+static const char* lept_parse_hex4(const char* p, unsigned* u) {	// 读取4位16进制数字
+	char* end;
+	*u = (unsigned)strtol(p, &end, 16);
+	return end == p + 4 ? end : NULL;
+}
+// 会接受"\u 123"这种不合法的JSON，还需判断字符串开头字符是否有空格
+#endif
+
+static void lept_encode_utf8(lept_context*c, unsigned u) {
+	if (u <= 0x7F) {
+		PUTC(c, u && 0xFF);
+	}
+	else if (u <= 0x7FF) {
+		PUTC(c, 0xC0 | ((u >> 6) & 0x1F));
+		PUTC(c, 0x80 | (u & 0x3F));
+	}
+	else if (u < 0xFFFF) {
+		PUTC(c, 0xE0 | ((u >> 12) & 0x0F));
+		PUTC(c, (0x80 | ((u >> 6) & 0x3F)));
+		PUTC(c, (0x80 | (u & 0x3F)));
+	}
+	else if (u < 0x10FFFF) {
+		PUTC(c, 0xF0 | ((u >> 18) & 0x07));
+		PUTC(c, 0x80 | ((u >> 12) & 0x3F));
+		PUTC(c, (0x80 | ((u >> 6) & 0x3F)));
+		PUTC(c, (0x80 | (u & 0x3F)));
+	}
+}
+
 static int lept_parse_string(lept_context* c, lept_value* v) {
 	/*
 	grammar:
@@ -159,13 +202,14 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 		要注意的是，该范围不包括 0 至 31、双引号和反斜线，这些码点都必须要使用转义方式表示。
 	*/
 	size_t head = c->top, len;
+	unsigned u, u2;
 	const char* p;
 	EXPECT(c, '\"');	// 字符串开头的引号
 	p = c->json;
 	for (;;) {
 		char ch = *p++;	// 取值后指针后移
 		switch (ch) {
-			case '\"':	// 情况1：遇到双引号
+			case '\"':	// 情况1：遇到字符串结束双引号
 				len = c->top - head;
 				lept_set_string(v, (const char*)lept_context_pop(c, len), len);
 				c->json = p;
@@ -180,6 +224,32 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 					case 'n':  PUTC(c, '\n'); break;
 					case 'r':  PUTC(c, '\r'); break;
 					case 't':  PUTC(c, '\t'); break;
+					case 'u':
+						if (!(p = lept_parse_hex4(p, &u))) {
+							c->top = head;
+							return LEPT_PARSE_INVALID_UNICODE_HEX;
+						}
+						if (u >= 0xD800 && u <= 0xDBFF) {
+							if (*p++ != '\\') {
+								c->top = head;
+								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+							}
+							if (*p++ != 'u') {
+								c->top = head;
+								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+							}
+							if (!(p = lept_parse_hex4(p, &u2))) {
+								c->top = head;
+								return LEPT_PARSE_INVALID_UNICODE_HEX;
+							}
+							if (u2 < 0xDC00 || u2 > 0xDFFF) {
+								c->top = head;
+								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+							}
+							u = (((u - 0xD800) << 10) | (u2 - 0xDC00)) + 0x10000;
+						}
+						lept_encode_utf8(c, u);
+						break;
 					default:	// 不合法转义
 						c->top = head;
 						return LEPT_PARSE_INVALID_STRING_ESCAPE;
