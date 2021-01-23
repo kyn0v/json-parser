@@ -207,7 +207,7 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 	EXPECT(c, '\"');	// 字符串开头的引号
 	p = c->json;
 	for (;;) {
-		char ch = *p++;	// 取值后指针后移
+		char ch = *p++;
 		switch (ch) {
 			case '\"':	// 情况1：遇到字符串结束双引号
 				len = c->top - head;
