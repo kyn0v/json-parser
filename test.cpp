@@ -153,12 +153,12 @@ static void test_parse_number() {
 }
 
 static void test_parse_string() {
-// 代码中已有注释时，用 #if 0 ... #endif 去禁用代码是一个常用技巧，而且可以把 0 改为 1 去恢复。
 	TEST_STRING("", "\"\"");
 	TEST_STRING("Hello", "\"Hello\"");
 	TEST_STRING("Hello\nWorld", "\"Hello\\nWorld\"");
 	TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
 	TEST_STRING("Hello\0World", "\"Hello\\u0000World\"");
+// 代码中已有注释时，用 #if 0 ... #endif 去禁用代码是一个常用技巧，而且可以把 0 改为 1 去恢复。
 #if 1
 	TEST_STRING("\x24", "\"\\u0024\"");         /* Dollar sign U+0024 */
 	TEST_STRING("\xC2\xA2", "\"\\u00A2\"");     /* Cents sign U+00A2 */
@@ -223,15 +223,6 @@ static void test_parse_invalid_string_char() {
 #endif
 }
 
-static void test_access_null() {
-	lept_value v;
-	lept_init(&v);
-	lept_set_string(&v, "a", 1);
-	lept_set_null(&v);
-	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
-	lept_free(&v);
-}
-
 static void test_parse_invalid_unicode_hex() {
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_HEX, "\"\\u\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_HEX, "\"\\u0\"");
@@ -253,6 +244,15 @@ static void test_parse_invalid_unicode_surrogate() {
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\\\\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uDBFF\"");
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uE000\"");
+}
+
+static void test_access_null() {
+	lept_value v;
+	lept_init(&v);
+	lept_set_string(&v, "a", 1);
+	lept_set_null(&v);
+	EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v));
+	lept_free(&v);
 }
 
 static void test_access_boolean() {

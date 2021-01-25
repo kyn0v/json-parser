@@ -149,14 +149,14 @@ static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖ
 	return p;
 }
 
-#if 0
+/*
 static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖÆÊı×Ö
 	char* end;
 	*u = (unsigned)strtol(p, &end, 16);
 	return end == p + 4 ? end : NULL;
 }
-// »á½ÓÊÜ"\u 123"ÕâÖÖ²»ºÏ·¨µÄJSON£¬»¹ĞèÅĞ¶Ï×Ö·û´®¿ªÍ·×Ö·ûÊÇ·ñÓĞ¿Õ¸ñ
-#endif
+note£ºÕâÖÖĞ´·¨»áÊ¹"\u 123"ÕâÖÖ²»ºÏ·¨µÄJSONÍ¨¹ıºÏ·¨²âÊÔ£¬Èç¹ûÊ¹ÓÃ£¬»¹ĞèÒªÔö¼ÓÅĞ¶Ï£¨×Ö·û´®¿ªÍ·×Ö·ûÊÇ·ñÓĞ¿Õ¸ñ£©
+*/
 
 static void lept_encode_utf8(lept_context*c, unsigned u) {
 	if (u <= 0x7F) {
