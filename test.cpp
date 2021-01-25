@@ -159,7 +159,7 @@ static void test_parse_string() {
 	TEST_STRING("Hello\nWorld", "\"Hello\\nWorld\"");
 	TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
 	TEST_STRING("Hello\0World", "\"Hello\\u0000World\"");
-#if 0
+#if 1
 	TEST_STRING("\x24", "\"\\u0024\"");         /* Dollar sign U+0024 */
 	TEST_STRING("\xC2\xA2", "\"\\u00A2\"");     /* Cents sign U+00A2 */
 	TEST_STRING("\xE2\x82\xAC", "\"\\u20AC\""); /* Euro sign U+20AC */

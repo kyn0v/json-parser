@@ -141,9 +141,9 @@ static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖ
 	for (int i = 0; i < 4; i++) {
 		char ch = *p++;
 		*u <<= 4;
-		if (ch >= '0'&&ch <= '9') *u |= (ch - '0');
-		else if (ch >= 'A'&&ch <= 'F')*u |= (ch - 'A' + 10);
-		else if (ch >= 'a'&&ch <= 'f')*u |= (ch - 'a' + 10);
+		if (ch >= '0'&&ch <= '9') *u |= ch - '0';
+		else if (ch >= 'A'&&ch <= 'F')*u |= ch - 'A' + 10;
+		else if (ch >= 'a'&&ch <= 'f')*u |= ch - 'a' + 10;
 		else return NULL;
 	}
 	return p;
@@ -160,7 +160,7 @@ static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖ
 
 static void lept_encode_utf8(lept_context*c, unsigned u) {
 	if (u <= 0x7F) {
-		PUTC(c, u && 0xFF);
+		PUTC(c, u & 0xFF);
 	}
 	else if (u <= 0x7FF) {
 		PUTC(c, 0xC0 | ((u >> 6) & 0x1F));
