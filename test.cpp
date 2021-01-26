@@ -47,6 +47,10 @@ void EXPECT_EQ_STRING(const char expect[], const char actual[], size_t alength) 
 	*/
 }
 
+void EXPECT_EQ_SIZE_T(size_t expect, size_t actual) {
+	EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu");
+}
+
 void EXPECT_TRUE(bool actual) {
 	EXPECT_EQ_BASE((actual) != 0, "true", "false", "%s");
 }
@@ -246,6 +250,16 @@ static void test_parse_invalid_unicode_surrogate() {
 	TEST_ERROR(LEPT_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uE000\"");
 }
 
+static void test_parse_array() {
+	lept_value v;
+
+	lept_init(&v);
+	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ ]"));
+	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
+	EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
+	lept_free(&v);
+}
+
 static void test_access_null() {
 	lept_value v;
 	lept_init(&v);
@@ -300,6 +314,7 @@ static void test_parse() {
 	test_parse_invalid_string_char();
 	test_parse_invalid_unicode_hex();
 	test_parse_invalid_unicode_surrogate();
+	test_parse_array();
 
 	test_access_null();
 	test_access_boolean();
