@@ -76,7 +76,7 @@ void lept_free(lept_value* v) {
 			break;
 		case LEPT_ARRAY:
 			for (int i = 0; i < v->u.a.size; i++) {
-				lept_free(&v->u.a.e[i]);
+				lept_free(&v->u.a.e[i]);	// µÝ¹éµ÷ÓÃ lept_free() ÊÍ·Å
 			}
 			free(v->u.a.e);
 			break;
