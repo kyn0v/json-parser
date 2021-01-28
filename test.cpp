@@ -171,7 +171,7 @@ static void test_parse_array() {
 	EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
 	lept_free(&v);
 
-#if 0
+#if 1
 	lept_init(&v);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[null , false , true , 123 , \"abc\"]"));
 	// note: EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[null, false, true, 123, \"abc\"]")); ´íÎóÑùÀý
@@ -187,7 +187,7 @@ static void test_parse_array() {
 	lept_free(&v);
 #endif
 
-#if 0
+#if 1
 	lept_init(&v);
 	EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[[], [0], [0 , 1], [0 , 1 , 2]]"));
 	EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
@@ -372,6 +372,6 @@ int main() {
 	test_parse();
 	test_access();
 	printf("%d/%d (%3.2f%%) passed\n", test_pass, test_count, test_pass * 100.0 / test_count);
-	system("pause");
+	// system("pause");
 	return main_ret;
 }

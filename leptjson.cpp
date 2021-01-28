@@ -70,11 +70,18 @@ inline void lept_init(lept_value * v) {
 
 void lept_free(lept_value* v) {
 	assert(v != NULL);
-	if (v->type == LEPT_STRING) {
-		free(v->u.s.s);
-	}
-	else if (v->type == LEPT_ARRAY) {
-		free(v->u.a.e);
+	switch (v->type) {
+		case LEPT_STRING:
+			free(v->u.s.s);
+			break;
+		case LEPT_ARRAY:
+			for (int i = 0; i < v->u.a.size; i++) {
+				lept_free(&v->u.a.e[i]);
+			}
+			free(v->u.a.e);
+			break;
+		default:
+			break;
 	}
 	v->type = LEPT_NULL;
 }
