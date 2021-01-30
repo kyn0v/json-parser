@@ -268,8 +268,8 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 			case '\0':	// 情况3：缺少右引号（样例见test_parse_missing_quotation_mark）
 				c->top = head;
 				return LEPT_PARSE_MISS_QUOTATION_MARK;
-			default:	// 情况4：不合法字符串
-				if ((unsigned char)ch < 0x20) {
+			default:	// 情况4（默认）：字符串
+				if ((unsigned char)ch < 0x20) {	// 不合法字符串
 					c->top = head;
 					return LEPT_PARSE_INVALID_STRING_CHAR;
 				}
@@ -292,6 +292,15 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 		v->u.a.e = NULL;
 		return LEPT_PARSE_OK;
 	}
+	//for (;;) {
+	//	/* bug! */
+	//	lept_value* e = lept_context_push(c, sizeof(lept_value));
+	//	lept_init(e);
+	//	size++;
+	//	if ((ret = lept_parse_value(c, e)) != LEPT_PARSE_OK)
+	//		return ret;
+	//	/* ... */
+	//}
 	for (;;) {
 		lept_value e;
 		lept_init(&e);
