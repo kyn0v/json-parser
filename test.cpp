@@ -195,7 +195,7 @@ static void test_parse_array() {
 	for (int i = 0; i < 4; i++) {
 		lept_value* a = lept_get_array_element(&v, i);
 		EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(a));
-		EXPECT_EQ_SIZE_T(4, lept_get_array_size(a));
+		EXPECT_EQ_SIZE_T(i, lept_get_array_size(a));
 		for (int j = 0; j < i; j++) {
 			lept_value* e = lept_get_array_element(a, j);
 			EXPECT_EQ_INT(LEPT_NUMBER, lept_get_type(e));
@@ -372,6 +372,6 @@ int main() {
 	test_parse();
 	test_access();
 	printf("%d/%d (%3.2f%%) passed\n", test_pass, test_count, test_pass * 100.0 / test_count);
-	// system("pause");
+	system("pause");
 	return main_ret;
 }

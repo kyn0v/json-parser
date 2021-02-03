@@ -281,6 +281,10 @@ static int lept_parse_string(lept_context* c, lept_value* v) {
 
 static int lept_parse_value(lept_context* c, lept_value* v); /* Ç°ÏòÉùÃ÷ */
 static int lept_parse_array(lept_context* c, lept_value* v) {
+	/*
+	grammar:
+		array = %x5B ws [ value *( ws %x2C ws value ) ] ws %x5D
+	*/
 	size_t size = 0;
 	int ret;
 	EXPECT(c, '[');
