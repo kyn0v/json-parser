@@ -12,7 +12,7 @@
 
 const int LEPT_PARSE_STACK_INIT_SIZE = 256;
 
-struct lept_context {	// ÎªÁË¼õÉÙ½âÎöº¯ÊýÖ®¼ä´«µÝ¶à¸ö²ÎÊý£¬Êý¾Ý¶¼·Å½øÒ»¸ö lept_context ½á¹¹Ìå
+struct lept_context {	// To reduce the number of parameters passed to paser-function, data is put into a stucture
 	const char* json;
 	char* stack;
 	size_t size, top;
@@ -76,7 +76,7 @@ void lept_free(lept_value* v) {
 			break;
 		case LEPT_ARRAY:
 			for (int i = 0; i < v->u.a.size; i++) {
-				lept_free(&v->u.a.e[i]);	// µÝ¹éµ÷ÓÃ lept_free() ÊÍ·Å
+				lept_free(&v->u.a.e[i]);	// Call lept_free() function recursively
 			}
 			free(v->u.a.e);
 			break;
@@ -88,7 +88,7 @@ void lept_free(lept_value* v) {
 
 static void lept_parse_whitespace(lept_context* c) {
 	const char* p = c->json;
-	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {	// ¿Õ¸ñ·û£¨space£©/ÖÆ±í·û£¨tab£©/»»ÐÐ·û£¨LF£©/»Ø³µ·û£¨CR£©
+	while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') {	// £¨space£©/£¨tab£©/£¨LF£©/£¨CR£©
 		p++;
 	}
 	c->json = p;
@@ -146,7 +146,7 @@ static int lept_parse_number(lept_context* c, lept_value* v) {
 	return LEPT_PARSE_OK;
 }
 
-static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖÆÊý×Ö
+static const char* lept_parse_hex4(const char* p, unsigned* u) {	// Read 4 bits of hexadecimal numbers
 	*u = 0;
 	for (int i = 0; i < 4; i++) {
 		char ch = *p++;
@@ -160,12 +160,14 @@ static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖ
 }
 
 /*
-static const char* lept_parse_hex4(const char* p, unsigned* u) {	// ¶ÁÈ¡4Î»16½øÖÆÊý×Ö
+BUG:
+static const char* lept_parse_hex4(const char* p, unsigned* u) {
 	char* end;
 	*u = (unsigned)strtol(p, &end, 16);
 	return end == p + 4 ? end : NULL;
 }
-note£ºÕâÖÖÐ´·¨»áÊ¹"\u 123"ÕâÖÖ²»ºÏ·¨µÄJSONÍ¨¹ýºÏ·¨²âÊÔ£¬Èç¹ûÊ¹ÓÃ£¬»¹ÐèÒªÔö¼ÓÅÐ¶Ï£¨×Ö·û´®¿ªÍ·×Ö·ûÊÇ·ñÓÐ¿Õ¸ñ£©
+note:	it would pass the invalid test case: "\u 123"£¬
+		and it should add processing to determine whether there are spaces at the beginning. 
 */
 
 static void lept_encode_utf8(lept_context*c, unsigned u) {
@@ -189,95 +191,100 @@ static void lept_encode_utf8(lept_context*c, unsigned u) {
 	}
 }
 
-static int lept_parse_string(lept_context* c, lept_value* v) {
+static int lept_parse_string_raw(lept_context* c, char** str, size_t* len) {
 	/*
 	grammar:
-		string = quotation-mark *char quotation-mark
-		char = unescaped /
-			escape (
-			%x22 /          ; "    quotation mark  U+0022
-			%x5C /          ; \    reverse solidus U+005C
-			%x2F /          ; /    solidus         U+002F
-			%x62 /          ; b    backspace       U+0008
-			%x66 /          ; f    form feed       U+000C
-			%x6E /          ; n    line feed       U+000A
-			%x72 /          ; r    carriage return U+000D
-			%x74 /          ; t    tab             U+0009
-			%x75 4HEXDIG )  ; uXXXX                U+XXXX
-		escape = %x5C          ; \
-		quotation-mark = %x22  ; "
-		unescaped = %x20-21 / %x23-5B / %x5D-10FFFF
-	note£º
-		ÎÞ×ªÒå×Ö·û¾ÍÊÇÆÕÍ¨µÄ×Ö·û£¬Óï·¨ÖÐÁÐ³öÁËºÏ·¨µÄÂëµã·¶Î§£¨unescaped£©¡£
-		Òª×¢ÒâµÄÊÇ£¬¸Ã·¶Î§²»°üÀ¨ 0 ÖÁ 31¡¢Ë«ÒýºÅºÍ·´Ð±Ïß£¬ÕâÐ©Âëµã¶¼±ØÐëÒªÊ¹ÓÃ×ªÒå·½Ê½±íÊ¾¡£
+	string = quotation-mark *char quotation-mark
+	char = unescaped /
+	escape (
+	%x22 /          ; "    quotation mark  U+0022
+	%x5C /          ; \    reverse solidus U+005C
+	%x2F /          ; /    solidus         U+002F
+	%x62 /          ; b    backspace       U+0008
+	%x66 /          ; f    form feed       U+000C
+	%x6E /          ; n    line feed       U+000A
+	%x72 /          ; r    carriage return U+000D
+	%x74 /          ; t    tab             U+0009
+	%x75 4HEXDIG )  ; uXXXX                U+XXXX
+	escape = %x5C          ; \
+	quotation-mark = %x22  ; "
+	unescaped = %x20-21 / %x23-5B / %x5D-10FFFF
 	*/
-	size_t head = c->top, len;
+	size_t head = c->top;
 	unsigned u, u2;
 	const char* p;
-	EXPECT(c, '\"');	// ×Ö·û´®¿ªÍ·µÄÒýºÅ
+	EXPECT(c, '\"');
 	p = c->json;
 	for (;;) {
 		char ch = *p++;
 		switch (ch) {
-			case '\"':	// Çé¿ö1£ºÓöµ½×Ö·û´®½áÊøË«ÒýºÅ
-				len = c->top - head;
-				lept_set_string(v, (const char*)lept_context_pop(c, len), len);
-				c->json = p;
-				return LEPT_PARSE_OK;
-			case '\\':	// Çé¿ö2£ºÓöµ½×ªÒå·ûºÅ
-				switch (*p++) {
-					case '\"': PUTC(c, '\"'); break;
-					case '\\': PUTC(c, '\\'); break;
-					case '/':  PUTC(c, '/'); break;
-					case 'b':  PUTC(c, '\b'); break;
-					case 'f':  PUTC(c, '\f'); break;
-					case 'n':  PUTC(c, '\n'); break;
-					case 'r':  PUTC(c, '\r'); break;
-					case 't':  PUTC(c, '\t'); break;
-					case 'u':
-						if (!(p = lept_parse_hex4(p, &u))) {
-							c->top = head;
-							return LEPT_PARSE_INVALID_UNICODE_HEX;
-						}
-						if (u >= 0xD800 && u <= 0xDBFF) {
-							if (*p++ != '\\') {
-								c->top = head;
-								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
-							}
-							if (*p++ != 'u') {
-								c->top = head;
-								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
-							}
-							if (!(p = lept_parse_hex4(p, &u2))) {
-								c->top = head;
-								return LEPT_PARSE_INVALID_UNICODE_HEX;
-							}
-							if (u2 < 0xDC00 || u2 > 0xDFFF) {
-								c->top = head;
-								return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
-							}
-							u = (((u - 0xD800) << 10) | (u2 - 0xDC00)) + 0x10000;
-						}
-						lept_encode_utf8(c, u);
-						break;
-					default:	// ²»ºÏ·¨×ªÒå
-						c->top = head;
-						return LEPT_PARSE_INVALID_STRING_ESCAPE;
-					}
-				break;
-			case '\0':	// Çé¿ö3£ºÈ±ÉÙÓÒÒýºÅ£¨ÑùÀý¼ûtest_parse_missing_quotation_mark£©
-				c->top = head;
-				return LEPT_PARSE_MISS_QUOTATION_MARK;
-			default:	// Çé¿ö4£¨Ä¬ÈÏ£©£º×Ö·û´®
-				if ((unsigned char)ch < 0x20) {	// ²»ºÏ·¨×Ö·û´®
+		case '\"':	// case 1£ºReading ending quotation marks
+			*len = c->top - head;
+			*str = (char*)lept_context_pop(c, *len);
+			c->json = p;
+			return LEPT_PARSE_OK;
+		case '\\':	// case 2£ºReading escape symbol
+			switch (*p++) {
+			case '\"': PUTC(c, '\"'); break;
+			case '\\': PUTC(c, '\\'); break;
+			case '/':  PUTC(c, '/'); break;
+			case 'b':  PUTC(c, '\b'); break;
+			case 'f':  PUTC(c, '\f'); break;
+			case 'n':  PUTC(c, '\n'); break;
+			case 'r':  PUTC(c, '\r'); break;
+			case 't':  PUTC(c, '\t'); break;
+			case 'u':
+				if (!(p = lept_parse_hex4(p, &u))) {
 					c->top = head;
-					return LEPT_PARSE_INVALID_STRING_CHAR;
+					return LEPT_PARSE_INVALID_UNICODE_HEX;
 				}
-				PUTC(c, ch);
+				if (u >= 0xD800 && u <= 0xDBFF) {
+					if (*p++ != '\\') {
+						c->top = head;
+						return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+					}
+					if (*p++ != 'u') {
+						c->top = head;
+						return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+					}
+					if (!(p = lept_parse_hex4(p, &u2))) {
+						c->top = head;
+						return LEPT_PARSE_INVALID_UNICODE_HEX;
+					}
+					if (u2 < 0xDC00 || u2 > 0xDFFF) {
+						c->top = head;
+						return LEPT_PARSE_INVALID_UNICODE_SURROGATE;
+					}
+					u = (((u - 0xD800) << 10) | (u2 - 0xDC00)) + 0x10000;
+				}
+				lept_encode_utf8(c, u);
+				break;
+			default:	// invalid escape symbol
+				c->top = head;
+				return LEPT_PARSE_INVALID_STRING_ESCAPE;
+			}
+			break;
+		case '\0':	// case 3£ºmissing quotation mark£¨see test sample in "test_parse_missing_quotation_mark"£©
+			c->top = head;
+			return LEPT_PARSE_MISS_QUOTATION_MARK;
+		default:	// case 4£ºnormal character
+			if ((unsigned char)ch < 0x20) {	// invalid character
+				c->top = head;
+				return LEPT_PARSE_INVALID_STRING_CHAR;
+			}
+			PUTC(c, ch);
 		}
 	}
 }
 
+static int lept_parse_string(lept_context* c, lept_value* v) {
+	int ret;
+	char* s;
+	size_t len;
+	if ((ret = lept_parse_string_raw(c, &s, &len)) == LEPT_PARSE_OK)
+		lept_set_string(v, s, len);
+	return ret;
+}
 
 static int lept_parse_value(lept_context* c, lept_value* v); /* Ç°ÏòÉùÃ÷ */
 static int lept_parse_array(lept_context* c, lept_value* v) {
@@ -335,6 +342,14 @@ static int lept_parse_array(lept_context* c, lept_value* v) {
 	for (int i = 0; i < size; i++)
 		lept_free((lept_value*)lept_context_pop(c, sizeof(lept_value)));
 	return ret;
+}
+
+static int lept_parse_object(lept_context* c, lept_value* v) {
+	/*
+	grammar:
+		member = string ws %x3A ws value
+		object = %x7B ws [ member *( ws %x2C ws member ) ] ws %x7D
+	*/
 }
 
 static int lept_parse_value(lept_context* c, lept_value* v) {
