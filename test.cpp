@@ -473,7 +473,7 @@ static void test_stringify() {
 	test_stringify_number();
 	test_stringify_string();
 	test_stringify_array();
-	//test_stringify_object();
+	test_stringify_object();
 }
 
 int main() {
